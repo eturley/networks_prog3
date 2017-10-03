@@ -32,7 +32,6 @@ int main(int argc, char * argv[]) {
 	
 	if (argc == 2){
 		portNum = atoi(argv[1]);
-		printf("%d\n",portNum);
 	}
 	else {
 		printf("Incorrect number of arguments. Usage: \n ./main [port number] [encryptionkey] \n");
@@ -63,12 +62,11 @@ int main(int argc, char * argv[]) {
 	}
 	
 	addr_len = sizeof(sin);
-	
-	while (1) {
-		if((listen(s, MAX_PENDING)) < 0) {
-			perror("simplex-talk: bind\n");
-		}
 
+	if((listen(s, MAX_PENDING)) < 0) {
+		perror("simplex-talk: bind\n");
+	}
+	while (1) {
 		if((new_s = accept(s, (struct sockaddr *)&sin, &addr_len)) < 0) {
 			perror("simplex-talk: accept\n");
 			exit(1);
@@ -80,7 +78,6 @@ int main(int argc, char * argv[]) {
 		}
 		if(len == 0) break;
 		printf("TCP Server Received: %s\n", buf);
-		bzero((char*)&buf,sizeof(buf));
 
 		if(strcmp(buf, "DWNLD") == 0) {
 			// do download stuff
@@ -111,11 +108,11 @@ int main(int argc, char * argv[]) {
 		}
 		
 		/*create time stamp*/
-		ltime=time(NULL);
-		Tm=localtime(&ltime);
-		printf("%d:%d:%d\n", Tm->tm_hour, Tm->tm_min, Tm->tm_sec);
-		gettimeofday(&tv, NULL);
-		sprintf(timeStamp, "%d:%d:%d.%d", Tm->tm_hour, Tm->tm_min, Tm->tm_sec, tv.tv_usec);
+		//ltime=time(NULL);
+		//Tm=localtime(&ltime);
+		//printf("%d:%d:%d\n", Tm->tm_hour, Tm->tm_min, Tm->tm_sec);
+		//gettimeofday(&tv, NULL);
+		//sprintf(timeStamp, "%d:%d:%d.%d", Tm->tm_hour, Tm->tm_min, Tm->tm_sec, tv.tv_usec);
 		bzero((char*)&buf,sizeof(buf));
 	}
 	if (close(s) != 0) {

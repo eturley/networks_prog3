@@ -76,6 +76,7 @@ int main(int argc, char * argv[]) {
 			perror("client send error!\n");
 			exit(1);
 		}
+		bzero((char *)& buf, sizeof(buf));
 	}
     
     if (close(s) != 0) {
