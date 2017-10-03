@@ -4,17 +4,20 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/types.h>
+#include <sys/wait.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <netdb.h>
 #include <time.h>
 #include <unistd.h>
+#include <dirent.h>
+#include <sys/stat.h>
 #define MAX_LINE 4096
 #define MAX_PENDING 5
 
 int main(int argc, char * argv[]) {
-    
-	
+
+
 	char timeStamp[20];
 	time_t ltime;
 	struct tm *Tm;
@@ -22,14 +25,18 @@ int main(int argc, char * argv[]) {
 	int stampLength, i;
 	struct sockaddr_in sin, client_addr;
 	char buf[MAX_LINE];
-	int len, addr_len,s, new_s;
+	int len, addr_len,s, new_s, f, status;
 	int portNum; int messageLength;
 	char *fullMessage;
 	char encMessage[4096];
 	char *encKey;
 	char *opt;
-	
-	
+	DIR *d;
+	struct dirent *de;
+	struct stat dirbuf;
+	int exists;
+	int total_size;
+
 	if (argc == 2){
 		portNum = atoi(argv[1]);
 	}
@@ -37,14 +44,14 @@ int main(int argc, char * argv[]) {
 		printf("Incorrect number of arguments. Usage: \n ./main [port number] [encryptionkey] \n");
 		exit(1);
 	}
-	
-    /* build address data structure */ 
+
+	/* build address data structure */ 
 	bzero ((char *)&sin, sizeof(sin)); 
 	sin.sin_family = AF_INET; 
 	sin.sin_addr.s_addr = INADDR_ANY; //Use the default IP address of server 
 	sin.sin_port = htons(portNum); 
-	
-	
+
+
 	/* setup passive open*/
 	if ((s = socket(PF_INET, SOCK_STREAM,0)) < 0) {
 		perror("simplex-talk:socket");
@@ -55,12 +62,12 @@ int main(int argc, char * argv[]) {
 		perror("simplex-talk:setsockopt\n");
 		exit(1);
 	}
-	
+
 	if ((bind(s, (struct sockaddr *) &sin, sizeof(sin))) < 0) {
 		perror("simplex-talk: bind");
 		exit(1);
 	}
-	
+
 	addr_len = sizeof(sin);
 
 	if((listen(s, MAX_PENDING)) < 0) {
@@ -71,52 +78,83 @@ int main(int argc, char * argv[]) {
 			perror("simplex-talk: accept\n");
 			exit(1);
 		}
+		while(1) {
 
-		if((len = recv(new_s, buf, sizeof(buf), 0)) == -1) {
-			perror("Server Received Error!\n");
-			exit(1);
-		}
-		if(len == 0) break;
-		printf("TCP Server Received: %s\n", buf);
+			if((len = recv(new_s, buf, sizeof(buf), 0)) == -1) {
+				perror("Server Received Error!\n");
+				exit(1);
+			}
+			if(len == 0) break;
+			printf("TCP Server Received: %s\n", buf);
 
-		if(strcmp(buf, "DWNLD") == 0) {
-			// do download stuff
+			if(strcmp(buf, "DWLD\n") == 0) {
+				//if((len = recv(new_s, buf, sizeof(buf), 0)) == -1) {
+				//	perror("asdf");
+				//}
+				printf("%s\n", buf);
+				// do download stuff
+			}
+			else if(strcmp(buf, "UPLD\n") == 0) {
+				// upload
+			}
+			else if(strcmp(buf, "DELF\n") == 0) {
+				// delete file
+			}
+			else if(strcmp(buf, "LIST\n") == 0) {
+				//f = fork();
+				//if(f < 0) {
+				//	perror("fork error\n");
+				//	exit(1);
+				//}
+				//else if(f == 0) {
+				//	execl("/bin/ls", "ls", "-l", (char *)0);
+				//}
+				//else {
+				//	wait(&status);
+				//}
+				if((d = opendir(".")) == NULL) {
+					perror("prsize");
+					exit(1);
+				}
+				total_size = 0;
+
+				for(de = readdir(d); de!=NULL; de = readdir(d)) {
+					exists = stat(de->d_name, &dirbuf);
+					if(exists < 0)
+						fprintf(stderr, "couldn't stat %s\n", de->d_name);
+					else
+						total_size += dirbuf.st_size;
+				}
+				closedir(d);
+			}
+			else if(strcmp(buf, "MDIR\n") == 0) {
+				// mkdir
+			}
+			else if(strcmp(buf, "RDIR\n") == 0) {
+				// rmdir
+			}
+			else if(strcmp(buf, "CDIR\n") == 0) {
+				// cd
+			}
+			else if(strcmp(buf, "QUIT\n") == 0) {
+				// quit
+				break;
+			}
+			else {
+				printf("Invalid Command\n");
+			}
+
+			/*create time stamp*/
+			//ltime=time(NULL);
+			//Tm=localtime(&ltime);
+			//printf("%d:%d:%d\n", Tm->tm_hour, Tm->tm_min, Tm->tm_sec);
+			//gettimeofday(&tv, NULL);
+			//sprintf(timeStamp, "%d:%d:%d.%d", Tm->tm_hour, Tm->tm_min, Tm->tm_sec, tv.tv_usec);
+			bzero((char*)&buf,sizeof(buf));
 		}
-		else if(strcmp(buf, "UPLD") == 0) {
-			// upload
+		if (close(new_s) != 0) {
+			perror("Was not closed!\n");
 		}
-		else if(strcmp(buf, "DELF") == 0) {
-			// delete file
-		}
-		else if(strcmp(buf, "LIST") == 0) {
-			// ls
-		}
-		else if(strcmp(buf, "MDIR") == 0) {
-			// mkdir
-		}
-		else if(strcmp(buf, "RDIR") == 0) {
-			// rmdir
-		}
-		else if(strcmp(buf, "CDIR") == 0) {
-			// cd
-		}
-		else if(strcmp(buf, "QUIT") == 0) {
-			// quit
-		}
-		else {
-			printf("Invalid Command\n");
-		}
-		
-		/*create time stamp*/
-		//ltime=time(NULL);
-		//Tm=localtime(&ltime);
-		//printf("%d:%d:%d\n", Tm->tm_hour, Tm->tm_min, Tm->tm_sec);
-		//gettimeofday(&tv, NULL);
-		//sprintf(timeStamp, "%d:%d:%d.%d", Tm->tm_hour, Tm->tm_min, Tm->tm_sec, tv.tv_usec);
-		bzero((char*)&buf,sizeof(buf));
 	}
-	if (close(s) != 0) {
-        perror("Was not closed!\n");
-    }
 } 
 
