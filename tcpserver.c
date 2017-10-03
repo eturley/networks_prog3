@@ -9,11 +9,8 @@
 #include <netdb.h>
 #include <time.h>
 #include <unistd.h>
-#define SERVER_PORT 41025
 #define MAX_LINE 4096
 #define MAX_PENDING 5
-#define MAX_KEY 16
-
 
 int main(int argc, char * argv[]) {
     
@@ -27,15 +24,14 @@ int main(int argc, char * argv[]) {
 	char buf[MAX_LINE];
 	int len, addr_len,s, new_s;
 	int portNum; int messageLength;
-	char key[MAX_KEY];
 	char *fullMessage;
 	char encMessage[4096];
 	char *encKey;
+	char *opt;
 	
 	
-	if (argc == 3){
+	if (argc == 2){
 		portNum = atoi(argv[1]);
-		encKey = argv[2];
 		printf("%d\n",portNum);
 	}
 	else {
