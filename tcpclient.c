@@ -77,6 +77,12 @@ int main(int argc, char * argv[]) {
 			exit(1);
 		}
 		bzero((char *)& buf, sizeof(buf));
+		if(recv(s, buf, sizeof(buf), 0) == -1) {
+			perror("client receive error");
+			exit(1);
+		}
+		printf("%s", buf);
+		bzero((char *)& buf, sizeof(buf));
 	}
     
     if (close(s) != 0) {

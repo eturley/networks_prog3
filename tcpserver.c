@@ -1,5 +1,5 @@
-//Marco Bruscia
-//netid: jbruscia
+//Marco Bruscia, Erin Turley, Michael Parowski
+//netid: jbruscia, eturly, mparowsk
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -36,6 +36,7 @@ int main(int argc, char * argv[]) {
 	struct stat dirbuf;
 	int exists;
 	int total_size;
+	char path[256], perms[MAX_LINE];
 
 	if (argc == 2){
 		portNum = atoi(argv[1]);
@@ -85,7 +86,6 @@ int main(int argc, char * argv[]) {
 				exit(1);
 			}
 			if(len == 0) break;
-			printf("TCP Server Received: %s\n", buf);
 
 			if(strcmp(buf, "DWLD\n") == 0) {
 				//if((len = recv(new_s, buf, sizeof(buf), 0)) == -1) {
@@ -101,30 +101,40 @@ int main(int argc, char * argv[]) {
 				// delete file
 			}
 			else if(strcmp(buf, "LIST\n") == 0) {
-				//f = fork();
-				//if(f < 0) {
-				//	perror("fork error\n");
-				//	exit(1);
-				//}
-				//else if(f == 0) {
-				//	execl("/bin/ls", "ls", "-l", (char *)0);
-				//}
-				//else {
-				//	wait(&status);
-				//}
 				if((d = opendir(".")) == NULL) {
 					perror("prsize");
 					exit(1);
 				}
 				total_size = 0;
 
-				for(de = readdir(d); de!=NULL; de = readdir(d)) {
-					exists = stat(de->d_name, &dirbuf);
-					if(exists < 0)
-						fprintf(stderr, "couldn't stat %s\n", de->d_name);
+				perms[0] = '\0';
+				while((de = readdir(d)) != 0) {
+					strcpy(path, ".");
+					strcat(path, "/");
+					strcat(path, de->d_name);
+					if(!stat(path, &dirbuf)) {
+						strcat(perms, (S_ISDIR(dirbuf.st_mode)) ? "d" : "-");
+						strcat(perms, (dirbuf.st_mode & S_IRUSR) ? "r" : "-");
+						strcat(perms, (dirbuf.st_mode & S_IWUSR) ? "w" : "-");
+						strcat(perms, (dirbuf.st_mode & S_IXUSR) ? "x" : "-");
+						strcat(perms, (dirbuf.st_mode & S_IRGRP) ? "r" : "-");
+						strcat(perms, (dirbuf.st_mode & S_IWGRP) ? "w" : "-");
+						strcat(perms, (dirbuf.st_mode & S_IXGRP) ? "x" : "-");
+						strcat(perms, (dirbuf.st_mode & S_IROTH) ? "r" : "-");
+						strcat(perms, (dirbuf.st_mode & S_IWOTH) ? "w" : "-");
+						strcat(perms, (dirbuf.st_mode & S_IXOTH) ? "x" : "-");
+					}
 					else
-						total_size += dirbuf.st_size;
+						perror("error in stat");
+					strcat(perms, "\t");
+					strcat(perms, de->d_name);
+					strcat(perms, "\n");
 				}
+				if(send(new_s, perms, strlen(perms)+1, 0) == -1) {
+					perror("server send error");
+					exit(1);
+				}
+				bzero((char *)& perms, sizeof(perms));
 				closedir(d);
 			}
 			else if(strcmp(buf, "MDIR\n") == 0) {
