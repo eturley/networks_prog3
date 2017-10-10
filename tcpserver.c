@@ -12,6 +12,7 @@
 #include <unistd.h>
 #include <dirent.h>
 #include <sys/stat.h>
+#include <errno.h>
 #define MAX_LINE 4096
 #define MAX_PENDING 5
 
@@ -141,8 +142,79 @@ int main(int argc, char * argv[]) {
 				// mkdir
 			}
 			else if(strcmp(buf, "RDIR\n") == 0) {
+				int dir_size; char * dir_name; char *confirm; int r;
 				// rmdir
+				/* obtain length of directory name and directory name */
+				if((len = recv(new_s, buf, sizeof(buf), 0)) == -1) {
+				    perror("Server Received Error!\n");
+				    exit(1);
+			    }
+			    dir_size = atoi(buf);
+    			bzero((char*)&buf,sizeof(buf));
+			    
+			    if((len = recv(new_s, buf, sizeof(buf), 0)) == -1) {
+				    perror("Server Received Error!\n");
+				    exit(1);
+			    }
+				dir_name = buf;
+				
+				printf("directory name: %s\n",dir_name);
+				
+				//check if directory exists
+				
+				DIR* dir = opendir(dir_name);
+				if (dir) {
+				    confirm = "1";
+				    closedir(dir);
+				} else if (ENOENT == errno ){
+				    confirm = "-1";
+				} else {
+				    perror("Couldn't open directory\n");
+				    exit(1);
+				}
+				
+				
+				//send confirmation of directory
+				if(send(new_s, confirm, strlen(confirm) + 1, 0) == -1) {
+			        perror("client send error!\n");
+			        exit(1);
+		        }
+		        
+		        if(strcmp(confirm, "-1") == 0) {
+		            break;
+		        }
+		        
+		        
+    			bzero((char*)&buf,sizeof(buf));
+		        //receive confirmation of deletion
+		        if((len = recv(new_s, buf, sizeof(buf), 0)) == -1) {
+				    perror("Server Received Error!\n");
+				    exit(1);
+			    }
+			    
+			    if (strcmp(buf, "Yes\n") == 0) {
+			        //delete directory
+			        if((rmdir(dir_name)) == -1) {
+			            if(send(new_s, "Fail", strlen("Directory Deleted"), 0) == -1) {
+			                perror("client send error!\n");
+			                exit(1);
+		                }
+			        } else {
+			            if(send(new_s, "Success", strlen("Success"), 0) == -1) {
+			                perror("client send error!\n");
+			                exit(1);
+		                }
+			        }
+			    } else if (strcmp(buf, "No\n") == 0) {
+			        // return to wait for operation
+        			bzero((char*)&buf,sizeof(buf));
+			        break;
+			    }
+				
 			}
+			
+				
+			
 			else if(strcmp(buf, "CDIR\n") == 0) {
 				// cd
 			}
@@ -162,6 +234,8 @@ int main(int argc, char * argv[]) {
 			//sprintf(timeStamp, "%d:%d:%d.%d", Tm->tm_hour, Tm->tm_min, Tm->tm_sec, tv.tv_usec);
 			bzero((char*)&buf,sizeof(buf));
 		}
+		
+		
 		if (close(new_s) != 0) {
 			perror("Was not closed!\n");
 		}
