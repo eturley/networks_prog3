@@ -157,11 +157,11 @@ int main(int argc, char * argv[]) {
 				    exit(1);
 			    }
 				dir_name = buf;
-				
+				dir_name[strlen(dir_name)-1] = '\0';
 				printf("directory name: %s\n",dir_name);
 				
 				//check if directory exists
-				dir_name[strlen(dir_name)] = '\0';
+				dir_name[strlen(dir_name)-1] = '\0';
 				DIR* dir = opendir(dir_name);
 				if (dir) {
 				    confirm = "1";
