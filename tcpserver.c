@@ -258,6 +258,7 @@ int main(int argc, char * argv[]) {
 				    perror("Server Received Error!\n");
 				    exit(1);
 				}
+				dir_size = ntohs(dir_size);
 				//dir_size = atoi(buf);
 				bzero((char*)&buf,sizeof(buf));
 				//receive dir name
@@ -285,6 +286,7 @@ int main(int argc, char * argv[]) {
 				
 				
 				//send confirmation of directory
+				confirm = htonl(confirm);
 				if(send(new_s, &confirm, sizeof(confirm), 0) == -1) {
 			        perror("client send error!\n");
 			        exit(1);
@@ -294,6 +296,7 @@ int main(int argc, char * argv[]) {
 		            break;
 		        }*/
 		        
+		        confirm = ntohl(confirm);
 		        if(confirm == -1) continue;
 		        
 		        
@@ -402,6 +405,6 @@ int main(int argc, char * argv[]) {
 		if (close(new_s) != 0) {
 			perror("Was not closed!\n");
 		}
-	}
-} 
+}
+ 
 

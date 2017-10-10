@@ -143,7 +143,7 @@ int main(int argc, char * argv[]) {
 		    
 		    len = strlen(buf) + 1;
 		    //send length of dir
-		    c = atoi(buf);
+		    c = htons(atoi(buf));
 		    if(send(s, &c, sizeof(c), 0) == -1) {
 			    perror("client send error!\n");
 			    exit(1);
@@ -167,6 +167,8 @@ int main(int argc, char * argv[]) {
 			    perror("client receive error");
 			    exit(1);
 		    }
+		    
+		    confirm = ntohl(confirm);
 		   
 		   printf("confirm: %d\n",confirm);
 		   if(confirm  == -1) {
