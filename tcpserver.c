@@ -93,6 +93,8 @@ int main(int argc, char * argv[]) {
 			perror("simplex-talk: accept\n");
 			exit(1);
 		}
+		while (1) {
+		
 			bzero((char*)&buf,sizeof(buf));
 			if((len = recv(new_s, buf, sizeof(buf), 0)) == -1) {
 				perror("Server Received Error!\n");
@@ -329,7 +331,7 @@ int main(int argc, char * argv[]) {
 			    } else if (strcmp(buf, "No") == 0) {
 			        // return to wait for operation
         			bzero((char*)&buf,sizeof(buf));
-			        break;
+			        continue;
 			    }
 				
 			}
@@ -400,10 +402,12 @@ int main(int argc, char * argv[]) {
 			//gettimeofday(&tv, NULL);
 			//sprintf(timeStamp, "%d:%d:%d.%d", Tm->tm_hour, Tm->tm_min, Tm->tm_sec, tv.tv_usec);
 			bzero((char*)&buf,sizeof(buf));
-		}
+			}
+		
 		
 		if (close(new_s) != 0) {
 			perror("Was not closed!\n");
+		}
 		}
 }
  
