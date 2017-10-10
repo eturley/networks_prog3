@@ -68,7 +68,12 @@ int main(int argc, char * argv[]) {
 		printf("Enter operation: ");
 		fgets(buf, sizeof(buf), stdin);
 		buf[MAX_LINE-1] = '\0';
-		if(!strncmp(buf, "QUIT", 4)) {
+		if(!strncmp(buf, "QUIT\n", 5)) {
+		    len = strlen(buf) + 1;
+			if(send(s, buf, len, 0) == -1) {
+			    perror("client send error!\n");
+			    exit(1);
+		    }
 			break;
 		} 
 		

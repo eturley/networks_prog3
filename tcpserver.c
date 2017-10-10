@@ -94,7 +94,6 @@ int main(int argc, char * argv[]) {
 			exit(1);
 		}
 		while (1) {
-		
 			bzero((char*)&buf,sizeof(buf));
 			if((len = recv(new_s, buf, sizeof(buf), 0)) == -1) {
 				perror("Server Received Error!\n");
@@ -206,7 +205,6 @@ int main(int argc, char * argv[]) {
 				}
 				bzero((char *)& perms, sizeof(perms));
 				closedir(d);
-				close(new_s);
 				continue;
 			}
 			else if(strcmp(buf, "MDIR\n") == 0) {
