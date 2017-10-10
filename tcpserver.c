@@ -12,8 +12,22 @@
 #include <unistd.h>
 #include <dirent.h>
 #include <sys/stat.h>
+#include <fcntl.h>
+#include <sys/sendfile.h>
+
 #define MAX_LINE 4096
+#define CHUNK_SIZE 1024
 #define MAX_PENDING 5
+
+int fsize(const char *);
+
+int fsize(const char *filename) {
+	struct stat st;
+
+	if(stat(filename, &st) == 0)
+		return st.st_size;
+	return -1;
+}
 
 int main(int argc, char * argv[]) {
 
@@ -25,8 +39,8 @@ int main(int argc, char * argv[]) {
 	int stampLength, i;
 	struct sockaddr_in sin, client_addr;
 	char buf[MAX_LINE];
-	int len, addr_len,s, new_s, f, status;
-	int portNum; int messageLength;
+	int len, addr_len,s, new_s, f, status, fd;
+	int portNum, messageLength, bytes_sent;
 	char *fullMessage;
 	char encMessage[4096];
 	char *encKey;
@@ -80,19 +94,73 @@ int main(int argc, char * argv[]) {
 			exit(1);
 		}
 		while(1) {
-
 			if((len = recv(new_s, buf, sizeof(buf), 0)) == -1) {
 				perror("Server Received Error!\n");
 				exit(1);
 			}
-			if(len == 0) break;
+			if(len == 0) {
+				printf("len was zero\n");
+				continue;
+			}
 
 			if(strcmp(buf, "DWLD\n") == 0) {
-				//if((len = recv(new_s, buf, sizeof(buf), 0)) == -1) {
-				//	perror("asdf");
-				//}
-				printf("%s\n", buf);
-				// do download stuff
+				// receive length of filename
+				if((len = recv(new_s, buf, sizeof(buf), 0)) == -1) {
+					perror("filename length recv error");
+				}
+				short fn_len = (short) atoi(buf);
+				printf("Filename length: %d\n", fn_len);
+				bzero((char *)& buf, sizeof(buf));
+
+				// receive filename
+				if((len = recv(new_s, buf, fn_len, 0)) == -1) {
+					perror("filename recv error");
+				}
+				char filename[MAX_LINE];
+				strcpy(filename, buf);
+				bzero((char *)& buf, sizeof(buf));
+				printf("filename: %s\n", filename);
+
+				if(!access(filename, F_OK)) { // file exists
+					int filesize = fsize(filename);
+					printf("filesize: %d\n", filesize);
+					if(filesize>-1){
+						int32_t conv = htonl(filesize);
+						char *err = (char*)&conv;
+						// send filesize
+						if(send(new_s, err, sizeof(err), 0) == -1) {
+							perror("file size send failure");
+						}
+						// send file
+						size_t nbytes = 0;
+						char file_data[CHUNK_SIZE];
+						off_t offset = 0;
+						fd = open(filename, O_RDONLY);
+						bytes_sent = sendfile(new_s, fd, &offset, filesize);
+						if(bytes_sent==-1)
+							perror("file send failure");
+						if(bytes_sent != filesize)
+							perror("bytes sent != filesize");
+						printf("bytes sent: %d\n", bytes_sent);
+						close(fd);
+						close(new_s);
+						printf("closed new_s\n");
+						break;
+					}
+					else {
+						perror("filesize error");
+						close(new_s);
+						exit(1);
+					}
+				}
+				else { // file no exists
+					int32_t conv = htonl(-1);
+					char *err = (char*)&conv;
+					if(send(new_s, err, sizeof(err), 0) == -1)
+						perror("error code send failure");
+					close(new_s);
+					break;
+				}
 			}
 			else if(strcmp(buf, "UPLD\n") == 0) {
 				// upload
@@ -136,6 +204,8 @@ int main(int argc, char * argv[]) {
 				}
 				bzero((char *)& perms, sizeof(perms));
 				closedir(d);
+				close(new_s);
+				break;
 			}
 			else if(strcmp(buf, "MDIR\n") == 0) {
 				// mkdir
@@ -150,8 +220,10 @@ int main(int argc, char * argv[]) {
 				// quit
 				break;
 			}
+			else if(strcmp(buf, "\n") == 0 || strcmp(buf, "") == 0) {
+			}
 			else {
-				printf("Invalid Command\n");
+				printf("%s: invalid command\n", buf);
 			}
 
 			/*create time stamp*/
@@ -161,9 +233,6 @@ int main(int argc, char * argv[]) {
 			//gettimeofday(&tv, NULL);
 			//sprintf(timeStamp, "%d:%d:%d.%d", Tm->tm_hour, Tm->tm_min, Tm->tm_sec, tv.tv_usec);
 			bzero((char*)&buf,sizeof(buf));
-		}
-		if (close(new_s) != 0) {
-			perror("Was not closed!\n");
 		}
 	}
 } 
