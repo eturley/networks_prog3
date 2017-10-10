@@ -207,7 +207,7 @@ int main(int argc, char * argv[]) {
 				bzero((char *)& perms, sizeof(perms));
 				closedir(d);
 				close(new_s);
-				break;
+				continue;
 			}
 			else if(strcmp(buf, "MDIR\n") == 0) {
 			  // mkdir
