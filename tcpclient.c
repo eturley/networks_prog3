@@ -141,19 +141,20 @@ int main(int argc, char * argv[]) {
 		   if(strcmp(confirm, "-1") == 0) {
 		        printf("The directory does not exist on server\n");
 		        continue;
-		    } else if (strcmp(confirm, "-1") == 0) {
+		    } else if (strcmp(confirm, "1") == 0) {
 		        printf("Are you sure you want to delete the directory? (Yes/No) ");
 		        fgets(buf, sizeof(buf), stdin);
 		        
-		        
 		        if (strcmp(buf, "Yes\n") == 0) {
-		            if(send(s, buf, strlen(buf) + 1, 0) == -1) //send the confirm
+		            if(send(s, "Yes", strlen("Yes") + 1, 0) == -1) {//send the confirm
+			            printf("yooo\n");
 			            perror("client send error!\n");
 			            exit(1);
 		            }
 		            
         		    bzero((char *)& buf, sizeof(buf));
 		            //wait for acknowledgement of deletion
+		            printf("what's up\n");
 		            if(recv(s, buf, sizeof(buf), 0) == -1) {
 			            perror("client receive error");
 			            exit(1);
@@ -162,24 +163,24 @@ int main(int argc, char * argv[]) {
 		            //let user know if it worked and return to prompt
 		            if(strcmp(buf,"Fail") == 0) {
 		                printf("Failed to delete directory\n");
-		                break;
+		                continue;
 		            } else if (strcmp(buf, "Success") == 0) {
 		                printf("Directory deleted\n");
-		                break;
+		                continue;
 		            }
 		            
 		            
 		        } else if (strcmp(buf, "No\n") == 0 ) { //user changed their mind
-		            if(send(s, buf, strlen(buf) + 1, 0) == -1) {
+		            if(send(s, "No", strlen("No") + 1, 0) == -1) {
 			            perror("client send error!\n");
 			            exit(1);
 		            }
 		            
 		            printf("Delete abandoned by the user!\n");
-		            break;
-		        }
-		} 
-		
+		            continue;
+		       }
+		    } 
+		}
 		
 		else if(strcmp(buf, "CDIR\n") == 0) {
 				// cd
