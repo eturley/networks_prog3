@@ -98,7 +98,7 @@ int main(int argc, char * argv[]) {
 		
 		
 		else if(strcmp(buf, "RDIR\n") == 0) {
-		    char confirm[3];
+		    int confirm; int c;
 		    len = strlen(buf) + 1;
 		    //send RDIR initial message
 		    if(send(s, buf, len, 0) == -1) {
@@ -113,7 +113,8 @@ int main(int argc, char * argv[]) {
 		    
 		    len = strlen(buf) + 1;
 		    //send length of dir
-		    if(send(s, buf, len, 0) == -1) {
+		    c = atoi(buf);
+		    if(send(s, &c, sizeof(c), 0) == -1) {
 			    perror("client send error!\n");
 			    exit(1);
 		    }
@@ -121,7 +122,7 @@ int main(int argc, char * argv[]) {
 		    bzero((char *)& buf, sizeof(buf));
 		    printf("Enter directory name: ");
 		    fgets(buf, sizeof(buf), stdin);
-		    
+		    printf("23\n");
 		    len = strlen(buf) + 1;
 		    //send dir name
 		    if(send(s, buf, len, 0) == -1) {
@@ -132,16 +133,16 @@ int main(int argc, char * argv[]) {
 		    bzero((char *)& buf, sizeof(buf));
 		    
 		    // receive confirm from server
-		    if(recv(s, confirm, sizeof(confirm), 0) == -1) {
+		    if(recv(s, &confirm, sizeof(confirm), 0) == -1) {
 			    perror("client receive error");
 			    exit(1);
 		    }
 		   
-		   printf("confirm: %s\n",confirm);
-		   if(strcmp(confirm, "-1") == 0) {
+		   printf("confirm: %d\n",confirm);
+		   if(confirm  == -1) {
 		        printf("The directory does not exist on server\n");
 		        continue;
-		    } else if (strcmp(confirm, "1") == 0) {
+		    } else if (confirm == 1) {
 		        printf("Are you sure you want to delete the directory? (Yes/No) ");
 		        fgets(buf, sizeof(buf), stdin);
 		        
