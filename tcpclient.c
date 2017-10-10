@@ -28,7 +28,7 @@ int main(int argc, char * argv[]) {
     char buf[MAX_LINE];
     char key[MAX_LINE];
     char encryptedMessage[MAX_LINE];
-    int s, len, ServerPort;
+    int s, len, ServerPort, fd, bytes_read;
 
     if (argc == 3) {
         host = argv[1];
@@ -212,6 +212,80 @@ int main(int argc, char * argv[]) {
 		       }
 		    } 
 		}
+		len = strlen(buf) + 1;
+		if(send(s, buf, len, 0) == -1) {
+			perror("client send error!\n");
+			exit(1);
+		}
+
+		if(!strncmp(buf, "DWLD", 4)) {
+			char fn[MAX_LINE];
+			char fn_len[MAX_LINE];
+			printf("Filename length: ");
+			fgets(fn_len, sizeof(fn_len), stdin);
+			printf("Filename: ");
+			fgets(fn, sizeof(fn), stdin);
+
+			/* Send length of filename */
+			if(send(s, fn_len, strlen(fn_len)+1, 0) == -1) {
+				perror("client filename length send error!\n");
+				exit(1);
+			}
+			/* Send filename */
+			if(send(s, fn, strlen(fn)+1, 0) == -1) {
+				perror("client filename send error!\n");
+				exit(1);
+			}
+
+			/* Get file size */
+			int32_t fsize;
+			char *sizedata = (char *)&fsize;
+			if(recv(s, sizedata, sizeof(sizedata), 0) == -1) {
+				perror("client file size recv error");
+			}
+			printf("file size: %d\n", ntohl(fsize));
+			if(ntohl(fsize)==-1) {
+				printf("file does not exist on %s\n", host);
+				continue;
+			}
+			else { // receive and save file
+				fp = fopen(fn, "ab+");
+				int bytes_written;
+				while(1) {
+					bzero((char *)&buf, sizeof(buf));
+					bytes_read = read(s, buf, sizeof(buf));
+					if(bytes_read == 0)
+						break;
+					if(bytes_read < 0) {
+						perror("read bytes error");
+						exit(1);
+					}
+
+					printf("bytes read: %d\n", bytes_read);
+					void *p = buf;
+					while(bytes_read > 0) {
+						bytes_written = write(fd, p, bytes_read);
+						if(bytes_written<=0) {
+							perror("idk write bytes error");
+							exit(1);
+						}
+						printf("bytes written: %d\n", bytes_written);
+						bytes_read -= bytes_written;
+						p += bytes_written;
+					}
+				}
+				printf("Successfully downloaded file\n");
+				bzero((char *)&buf, sizeof(buf));
+			}
+		}	
+		if(!strncmp(buf, "LIST", 4)) {
+			if(recv(s, buf, sizeof(buf), 0) == -1) {
+				perror("client receive error");
+				exit(1);
+			}
+			printf("%s", buf);
+			bzero((char *)& buf, sizeof(buf));
+		}
 		
 		else if(strcmp(buf, "CDIR\n") == 0) {
 			int confirm; int c;
@@ -267,7 +341,7 @@ int main(int argc, char * argv[]) {
 		}
 
 	    bzero((char *)& buf, sizeof(buf));
-		
+
 	}
     
     if (close(s) != 0) {
