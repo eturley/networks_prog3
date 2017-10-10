@@ -225,7 +225,51 @@ int main(int argc, char * argv[]) {
 				
 			
 			else if(strcmp(buf, "CDIR\n") == 0) {
-				// cd
+				int dir_size; char dir_name [1024]; int confirm; int r;
+				// rmdir
+				/* obtain length of directory name and directory name */
+				if((len = recv(new_s, &dir_size, sizeof(dir_size), 0)) == -1) {
+				    perror("Server Received Error!\n");
+				    exit(1);
+			    }
+			    //dir_size = atoi(buf);
+    			bzero((char*)&buf,sizeof(buf));
+			    //receive dir name
+			    if((len = recv(new_s, buf, sizeof(buf), 0)) == -1) {
+				    perror("Server Received Error!\n");
+				    exit(1);
+			    }
+				//dir_name = buf;
+				strcpy(dir_name, buf);
+				dir_name[strlen(dir_name)-1] = '\0';
+				printf("directory name: %s\n",dir_name);
+				
+				//check if directory exists
+				DIR* dir = opendir(dir_name);
+				if (dir) {
+					char cwd[1024];
+			        getcwd(cwd, sizeof(cwd));
+			        strcat(cwd,"/");
+			        strcat(cwd,dir_name);
+			        if((chdir(cwd)) == -1){
+			        	confirm = -1;
+			        } else confirm = 1;
+				    closedir(dir);
+				} else if (ENOENT == errno ){
+				    confirm = -2;
+				    printf("Doesn't exist\n");
+				} else {
+				    perror("Couldn't open directory\n");
+				    exit(1);
+				}
+				
+				//send confirmation of directory
+				if(send(new_s, &confirm, sizeof(confirm), 0) == -1) {
+			        perror("client send error!\n");
+			        exit(1);
+		        }
+		        
+				
 			}
 			else if(strcmp(buf, "QUIT\n") == 0) {
 				// quit

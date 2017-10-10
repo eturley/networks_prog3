@@ -184,7 +184,56 @@ int main(int argc, char * argv[]) {
 		}
 		
 		else if(strcmp(buf, "CDIR\n") == 0) {
-				// cd
+			int confirm; int c;
+		    len = strlen(buf) + 1;
+		    //send RDIR initial message
+		    if(send(s, buf, len, 0) == -1) {
+			    perror("client send error!\n");
+			    exit(1);
+		    }
+		    
+		    bzero((char *)& buf, sizeof(buf));
+		    
+		    printf("Enter Length of directory name: ");
+		    fgets(buf, sizeof(buf), stdin);
+		    
+		    len = strlen(buf) + 1;
+		    //send length of dir
+		    c = atoi(buf);
+		    if(send(s, &c, sizeof(c), 0) == -1) {
+			    perror("client send error!\n");
+			    exit(1);
+		    }
+		    
+		    bzero((char *)& buf, sizeof(buf));
+		    printf("Enter directory name: ");
+		    fgets(buf, sizeof(buf), stdin);
+		    printf("23\n");
+		    len = strlen(buf) + 1;
+		    //send dir name
+		    if(send(s, buf, len, 0) == -1) {
+			    perror("client send error!\n");
+			    exit(1);
+		    }
+		    
+		    bzero((char *)& buf, sizeof(buf));
+		    
+		     // receive confirm from server
+		    if(recv(s, &confirm, sizeof(confirm), 0) == -1) {
+			    perror("client receive error");
+			    exit(1);
+		    }
+		    
+		    if(confirm == 1){
+		     	printf("Changed current directory\n");
+		     	continue;
+		    } else if (confirm == -1) {
+		    	printf("Error changing directory\n");
+		    	continue;
+		    } else if (confirm == -2) {
+		    	printf("The directory does not exist on server\n");
+		    	continue;
+		    }
 		}
 
 	    bzero((char *)& buf, sizeof(buf));
