@@ -162,7 +162,7 @@ int main(int argc, char * argv[]) {
 				
 				//check if directory exists
 				dir_name[strlen(dir_name)-1] = '\0';
-				DIR* dir = opendir(dir_name);
+				DIR* dir = opendir("now");
 				if (dir) {
 				    confirm = "1";
 				    closedir(dir);
