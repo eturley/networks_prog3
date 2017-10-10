@@ -161,13 +161,14 @@ int main(int argc, char * argv[]) {
 				printf("directory name: %s\n",dir_name);
 				
 				//check if directory exists
-				
+				dir_name[strlen(dir_name)] = '\0';
 				DIR* dir = opendir(dir_name);
 				if (dir) {
 				    confirm = "1";
 				    closedir(dir);
 				} else if (ENOENT == errno ){
 				    confirm = "-1";
+				    printf("Doesn't exist\n");
 				} else {
 				    perror("Couldn't open directory\n");
 				    exit(1);

@@ -98,7 +98,7 @@ int main(int argc, char * argv[]) {
 		
 		
 		else if(strcmp(buf, "RDIR\n") == 0) {
-		    char * confirm;
+		    char confirm[3];
 		    len = strlen(buf) + 1;
 		    //send RDIR initial message
 		    if(send(s, buf, len, 0) == -1) {
@@ -136,10 +136,11 @@ int main(int argc, char * argv[]) {
 			    perror("client receive error");
 			    exit(1);
 		    }
-		    
+		   
+		   printf("confirm: %s\n",confirm);
 		   if(strcmp(confirm, "-1") == 0) {
 		        printf("The directory does not exist on server\n");
-		        break;
+		        continue;
 		    } else if (strcmp(confirm, "-1") == 0) {
 		        printf("Are you sure you want to delete the directory? (Yes/No) ");
 		        fgets(buf, sizeof(buf), stdin);
