@@ -139,7 +139,47 @@ int main(int argc, char * argv[]) {
 				closedir(d);
 			}
 			else if(strcmp(buf, "MDIR\n") == 0) {
-				// mkdir
+			  // mkdir
+			  int dir_size, confirm, rc;
+			  char dir_name[1024];
+			  //length of directory ???
+			  if((len = recv(new_s, &dir_size, sizeof(dir_size), 0)) == -1){
+			    perror("server received error!\n");
+			    exit(1);
+			  }
+			  bzero((char *)&buf, sizeof(buf));
+			  //directory name
+			  if((len = recv(new_s, buf, sizeof(buf), 0)) == -1){
+			    perror("server received error!\n");
+			    exit(1);
+			  }
+			  strcpy(dir_name, buf);
+			  dir_name[strlen(dir_name) - 1] = '\0';
+			  printf("directory name: %s\n", dir_name); //debugging
+
+			  //check if directory exists
+			  DIR* dir = opendir(dir_name);
+			  if(dir) {
+			    confirm = -2;
+			    closedir(dir);
+			  } else {
+			    //make directory
+			    char cwd[1024];
+			    getcwd(cwd, sizeof(cwd));
+			    strcat(cwd,"/");
+			    strcat(cwd,dir_name);
+			    
+			    rc = mkdir(cwd, S_ISVTX);
+			    if(rc < 0){
+			      confirm = -1;
+			    } else {
+			      confirm = 1;
+			    }
+			  }
+			  if(send(new_s, &confirm, sizeof(confirm), 0) == -1) {
+			    perror("client send error!\n");
+			    exit(1);
+			  }
 			}
 			else if(strcmp(buf, "RDIR\n") == 0) {
 				int dir_size; char dir_name [1024]; int confirm; int r;
@@ -148,14 +188,14 @@ int main(int argc, char * argv[]) {
 				if((len = recv(new_s, &dir_size, sizeof(dir_size), 0)) == -1) {
 				    perror("Server Received Error!\n");
 				    exit(1);
-			    }
-			    //dir_size = atoi(buf);
-    			bzero((char*)&buf,sizeof(buf));
-			    //receive dir name
-			    if((len = recv(new_s, buf, sizeof(buf), 0)) == -1) {
-				    perror("Server Received Error!\n");
-				    exit(1);
-			    }
+				}
+				//dir_size = atoi(buf);
+				bzero((char*)&buf,sizeof(buf));
+				//receive dir name
+				if((len = recv(new_s, buf, sizeof(buf), 0)) == -1) {
+				  perror("Server Received Error!\n");
+				  exit(1);
+				}
 				//dir_name = buf;
 				strcpy(dir_name, buf);
 				dir_name[strlen(dir_name)-1] = '\0';

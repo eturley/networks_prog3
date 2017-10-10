@@ -93,7 +93,37 @@ int main(int argc, char * argv[]) {
 		
 		
 		else if(strcmp(buf, "MDIR\n") == 0) {
-				// cd
+		  int confirm, c;
+		  len = strlen(buf) + 1;
+		  //tell server command is MDIR
+		  if(send(s, buf, len, 0) == -1){
+		    perror("client send error!\n");
+		    exit(1);
+		  }
+		  bzero((char *)& buf, sizeof(buf));
+		  printf("Enter length of directory name: ");
+		  fgets(buf, sizeof(buf), stdin);
+		  len = strlen(buf) + 1;
+		  c = atoi(buf);
+		  if(send(s, &c, sizeof(c), 0) == -1){
+		    perror("client send error!\n");
+		    exit(1);
+		  }
+		  bzero((char *)& buf, sizeof(buf));
+		  printf("Enter name of new directory: ");
+		  fgets(buf, sizeof(buf), stdin);
+		  len = strlen(buf) + 1;
+		  if(send(s, buf, len, 0) == -1) {
+		    perror("client send error!\n");
+		    exit(1);
+		  }
+		  bzero((char *)& buf, sizeof(buf));
+		  //receive numerical confirmation from server
+		  if(recv(s, &confirm, sizeof(confirm), 0) == -1) {
+		    perror("client receive error!\n");
+		    exit(1);
+		  }
+		  printf("%d", confirm);
 		} 
 		
 		
