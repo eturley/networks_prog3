@@ -77,6 +77,7 @@ int main(int argc, char * argv[]) {
 			break;
 		} 
 		
+		//LIST
 		else if(strcmp(buf, "LIST\n")==0){
 		    len = strlen(buf) + 1;
 		    if(send(s, buf, len, 0) == -1) {
@@ -92,11 +93,81 @@ int main(int argc, char * argv[]) {
 		    bzero((char *)& buf, sizeof(buf));
 		} 
 		
+		//DELF
 		else if(strcmp(buf, "DELF\n") == 0) {
-				// cd
-		} 
+		  int confirm, c;
+		  len = strlen(buf) + 1;
+		  if(send(s, buf, len, 0) == 1){
+		    perror("client send error!\n");
+		    exit(1);
+		  }
+		  bzero((char *)& buf, sizeof(buf));
+		  printf("Enter length of file name: ");
+		  fgets(buf, sizeof(buf), stdin);
+		  len = strlen(buf) + 1;
+		  c = htons(atoi(buf));
+		  if(send(s, &c, sizeof(c), 0) == -1){
+		    perror("client send error!\n");
+		    exit(1);
+		  }
+		  bzero((char *)& buf, sizeof(buf));
+		  printf("Enter name of file: ");
+		  fgets(buf, sizeof(buf), stdin);
+		  len = strlen(buf) + 1;
+		  if(send(s, buf, len, 0) == -1){
+		    perror("client send error!\n");
+		    exit(1);
+		  }
+		  bzero((char *)& buf, sizeof(buf));
+		  if(recv(s, &confirm, sizeof(confirm), 0) == -1){
+		    perror("client receive error!\n");
+		    exit(1);
+		  }
+
+		  //receive numerical confirmation from server
+		  confirm = ntohl(confirm);
+		  if(confirm  == -1) {
+		    printf("The file does not exist on server\n");
+		    continue;
+		  } 
+		  else if (confirm == 1) {
+		    printf("Are you sure you want to delete the file? (Yes/No) ");
+		    fgets(buf, sizeof(buf), stdin);
+		    
+		    if (strcmp(buf, "Yes\n") == 0) {
+		      if(send(s, "Yes", strlen("Yes") + 1, 0) == -1) {//send the confirm
+			perror("client send error!\n");
+			exit(1);
+		      }		      
+		      bzero((char *)& buf, sizeof(buf));
+		      //wait for acknowledgement of deletion
+		      if(recv(s, buf, sizeof(buf), 0) == -1) {
+			perror("client receive error");
+			exit(1);
+		      }
+		      
+		      if(strcmp(buf,"Fail") == 0) {
+			printf("Failed to delete file\n");
+			continue;
+		      } else if (strcmp(buf, "Success") == 0) {
+			printf("File deleted\n");
+			continue;
+		      }
+		      
+		      
+		    } else if (strcmp(buf, "No\n") == 0 ) {
+		      if(send(s, "No", strlen("No") + 1, 0) == -1) {
+			perror("client send error!\n");
+			exit(1);
+		      }
+		      
+		      printf("Delete abandoned by the user!\n");
+		      continue;
+		    } 
+		  }
+		}
 		
-		
+		//MDIR
 		else if(strcmp(buf, "MDIR\n") == 0) {
 		  int confirm, c;
 		  len = strlen(buf) + 1;
@@ -128,10 +199,16 @@ int main(int argc, char * argv[]) {
 		    perror("client receive error!\n");
 		    exit(1);
 		  }
-		  printf("%d", confirm);
+		  if(confirm == -1){
+		    printf("Error in creating directory\n");
+		  } else if(confirm == -2){
+		    printf("The directory already exists on server\n");
+		  } else {
+		    printf("Directory created successfully\n");
+		  }
 		} 
 		
-		
+		//RDIR
 		else if(strcmp(buf, "RDIR\n") == 0) {
 		    int confirm; int c;
 		    len = strlen(buf) + 1;
@@ -225,6 +302,7 @@ int main(int argc, char * argv[]) {
 			exit(1);
 		}
 
+		//DWLD
 		if(!strncmp(buf, "DWLD", 4)) {
 			char fn[MAX_LINE];
 			char fn_len[MAX_LINE];
@@ -284,16 +362,18 @@ int main(int argc, char * argv[]) {
 				printf("Successfully downloaded file\n");
 				bzero((char *)&buf, sizeof(buf));
 			}
-		}	
-		if(!strncmp(buf, "LIST", 4)) {
+		}
+	
+		/*if(!strncmp(buf, "LIST", 4)) {
 			if(recv(s, buf, sizeof(buf), 0) == -1) {
 				perror("client receive error");
 				exit(1);
 			}
 			printf("%s", buf);
 			bzero((char *)& buf, sizeof(buf));
-		}
+			}*/
 		
+		//CDIR
 		else if(strcmp(buf, "CDIR\n") == 0) {
 			int confirm; int c;
 		    len = strlen(buf) + 1;
