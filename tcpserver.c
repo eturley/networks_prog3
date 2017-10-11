@@ -100,7 +100,6 @@ int main(int argc, char * argv[]) {
 				exit(1);
 			}
 			if(len == 0) {
-				printf("len was zero\n");
 				continue;
 			}
 
@@ -110,7 +109,6 @@ int main(int argc, char * argv[]) {
 					perror("filename length recv error");
 				}
 				short fn_len = (short) atoi(buf);
-				printf("Filename length: %d\n", fn_len);
 				bzero((char *)& buf, sizeof(buf));
 
 				// receive filename
@@ -120,11 +118,9 @@ int main(int argc, char * argv[]) {
 				char filename[MAX_LINE];
 				strcpy(filename, buf);
 				bzero((char *)& buf, sizeof(buf));
-				printf("filename: %s\n", filename);
 
 				if(!access(filename, F_OK)) { // file exists
 					int filesize = fsize(filename);
-					printf("filesize: %d\n", filesize);
 					if(filesize>-1){
 						int32_t conv = htonl(filesize);
 						char *err = (char*)&conv;
@@ -142,15 +138,10 @@ int main(int argc, char * argv[]) {
 							perror("file send failure");
 						if(bytes_sent != filesize)
 							perror("bytes sent != filesize");
-						printf("bytes sent: %d\n", bytes_sent);
 						close(fd);
-						close(new_s);
-						printf("closed new_s\n");
-						break;
 					}
-					else {
+					else { // filesize returned error code
 						perror("filesize error");
-						close(new_s);
 						exit(1);
 					}
 				}
@@ -159,8 +150,7 @@ int main(int argc, char * argv[]) {
 					char *err = (char*)&conv;
 					if(send(new_s, err, sizeof(err), 0) == -1)
 						perror("error code send failure");
-					close(new_s);
-					break;
+					continue;
 				}
 			}
 			else if(strcmp(buf, "UPLD\n") == 0) {
