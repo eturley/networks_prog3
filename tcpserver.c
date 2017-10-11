@@ -103,7 +103,8 @@ int main(int argc, char * argv[]) {
 				printf("len was zero\n");
 				continue;
 			}
-
+			
+			//DWLD
 			if(strcmp(buf, "DWLD\n") == 0) {
 				// receive length of filename
 				if((len = recv(new_s, buf, sizeof(buf), 0)) == -1) {
@@ -163,12 +164,83 @@ int main(int argc, char * argv[]) {
 					break;
 				}
 			}
+			//UPLD
 			else if(strcmp(buf, "UPLD\n") == 0) {
 				// upload
 			}
+
+			//DELF
 			else if(strcmp(buf, "DELF\n") == 0) {
-				// delete file
+			  int file_size, confirm; 
+			  char file_name [1024]; 
+
+			  //receive file name length and file name
+			  if((len = recv(new_s, &file_size, sizeof(file_size), 0)) == -1) {
+			    perror("Server Received Error!\n");
+			    exit(1);
+			  }
+			  file_size = ntohs(file_size);
+			  bzero((char*)&buf,sizeof(buf));
+			  if((len = recv(new_s, buf, sizeof(buf), 0)) == -1) {
+			    perror("Server Received Error!\n");
+			    exit(1);
+			  }
+			  strcpy(file_name, buf);
+			  file_name[strlen(file_name)-1] = '\0';
+			  printf("file name: %s\n", file_name);
+			  
+			  //check if file exists
+			  FILE * f = fopen(file_name, "r");
+			  if(f){
+			    confirm = 1;
+			    fclose(f);
+			  } else if(ENOENT == errno){
+			    confirm = -1;
+			  } else{
+			    perror("couldn't open file\n");
+			    exit(1);
+			  }
+			  confirm = htonl(confirm);
+			  
+			  //send confirmation of directory
+			  if(send(new_s, &confirm, sizeof(confirm), 0) == -1) {
+			    perror("client send error!\n");
+			    exit(1);
+			  }
+
+			  confirm = ntohl(confirm);
+			  if(confirm == -1) continue;			  
+       			  bzero((char*)&buf,sizeof(buf));
+
+			  //receive confirmation of deletion
+			  if((len = recv(new_s, buf, sizeof(buf), 0)) == -1) {
+			    perror("Server Received Error!\n");
+			    exit(1);
+			  }
+			  
+			  if (strcmp(buf, "Yes") == 0) {
+			    printf("delete confirmed\n");
+
+			    //delete file
+			    if(remove(file_name) == 0){
+			      if(send(new_s, "Success", strlen("Success")+1, 0) == -1){
+				perror("client send error!\n");
+				exit(1);
+			      }
+			    } else {
+			      if(send(new_s, "Fail", strlen("Fail")+1, 0) == -1){
+				perror("client send error!\n");
+				exit(1);
+			      }
+			    }
+			  } else if (strcmp(buf, "No") == 0) {
+			    // return to wait for operation
+			    bzero((char*)&buf,sizeof(buf));
+			    continue;
+			  }
 			}
+
+			//LIST
 			else if(strcmp(buf, "LIST\n") == 0) {
 				if((d = opendir(".")) == NULL) {
 					perror("prsize");
@@ -207,11 +279,13 @@ int main(int argc, char * argv[]) {
 				closedir(d);
 				continue;
 			}
+
+			//MDIR
 			else if(strcmp(buf, "MDIR\n") == 0) {
 			  // mkdir
 			  int dir_size, confirm, rc;
 			  char dir_name[1024];
-			  //length of directory ???
+			  //length of directory
 			  if((len = recv(new_s, &dir_size, sizeof(dir_size), 0)) == -1){
 			    perror("server received error!\n");
 			    exit(1);
@@ -224,7 +298,6 @@ int main(int argc, char * argv[]) {
 			  }
 			  strcpy(dir_name, buf);
 			  dir_name[strlen(dir_name) - 1] = '\0';
-			  printf("directory name: %s\n", dir_name); //debugging
 
 			  //check if directory exists
 			  DIR* dir = opendir(dir_name);
@@ -250,6 +323,8 @@ int main(int argc, char * argv[]) {
 			    exit(1);
 			  }
 			}
+
+			//RDIR
 			else if(strcmp(buf, "RDIR\n") == 0) {
 				int dir_size; char dir_name [1024]; int confirm; int r;
 				// rmdir
@@ -335,7 +410,7 @@ int main(int argc, char * argv[]) {
 			}
 			
 				
-			
+			//CDIR
 			else if(strcmp(buf, "CDIR\n") == 0) {
 				int dir_size; char dir_name [1024]; int confirm; int r;
 				// rmdir
@@ -377,12 +452,13 @@ int main(int argc, char * argv[]) {
 				
 				//send confirmation of directory
 				if(send(new_s, &confirm, sizeof(confirm), 0) == -1) {
-			        perror("client send error!\n");
-			        exit(1);
-		        }
+				  perror("client send error!\n");
+				  exit(1);
+				}
 		        
 				
 			}
+			//QUIT
 			else if(strcmp(buf, "QUIT\n") == 0) {
 				// quit
 				break;
