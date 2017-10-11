@@ -10,8 +10,17 @@
 #include <netdb.h>
 #include <time.h>
 #include <unistd.h>
+#include <sys/stat.h>
+#include <fcntl.h>
 #define MAX_LINE 4096
 
+char *trim(char *s) {
+	//int i = strlen(s);
+	//if((i>0) && (s[i]=='\n'))
+	//	s[i]=='\0';
+	//return s;
+	return strtok(s, "\n");
+}
 
 int main(int argc, char * argv[]) {
     
@@ -28,7 +37,7 @@ int main(int argc, char * argv[]) {
     char buf[MAX_LINE];
     char key[MAX_LINE];
     char encryptedMessage[MAX_LINE];
-    int s, len, ServerPort, fd, bytes_read;
+    int s, len, ServerPort, fd, bytes_read, bytes_written;
 
     if (argc == 3) {
         host = argv[1];
@@ -328,35 +337,36 @@ int main(int argc, char * argv[]) {
 			if(recv(s, sizedata, sizeof(sizedata), 0) == -1) {
 				perror("client file size recv error");
 			}
-			printf("file size: %d\n", ntohl(fsize));
 			if(ntohl(fsize)==-1) {
-				printf("file does not exist on %s\n", host);
+				printf("File does not exist on %s\n", host);
 				continue;
 			}
 			else { // receive and save file
-				fp = fopen(fn, "ab+");
-				int bytes_written;
+				fn[strlen(fn)-1]='\0'; // get rid of trailing newline for filename
+				fd = open(fn, O_CREAT | O_RDWR, S_IRUSR|S_IWUSR);
+				bytes_written=0;
+				int bytes=0;
+				bytes_read = 0;
 				while(1) {
 					bzero((char *)&buf, sizeof(buf));
-					bytes_read = read(s, buf, sizeof(buf));
-					if(bytes_read == 0)
+					if(bytes_written == ntohl(fsize))
 						break;
+					bytes_read = read(s, buf, sizeof(buf));
 					if(bytes_read < 0) {
 						perror("read bytes error");
 						exit(1);
 					}
 
-					printf("bytes read: %d\n", bytes_read);
 					void *p = buf;
 					while(bytes_read > 0) {
-						bytes_written = write(fd, p, bytes_read);
-						if(bytes_written<=0) {
-							perror("idk write bytes error");
+						bytes = write(fd, p, bytes_read);
+						if(bytes<=0) {
+							perror("write bytes error");
 							exit(1);
 						}
-						printf("bytes written: %d\n", bytes_written);
-						bytes_read -= bytes_written;
-						p += bytes_written;
+						bytes_read -= bytes;
+						p += bytes;
+						bytes_written += bytes;
 					}
 				}
 				printf("Successfully downloaded file\n");
