@@ -15,11 +15,13 @@
 #include <fcntl.h>
 #include <sys/sendfile.h>
 #include <errno.h>
+#include <math.h>
 #define MAX_LINE 4096
 #define CHUNK_SIZE 1024
 #define MAX_PENDING 5
 
 int fsize(const char *);
+double sec_usec(int, int);
 
 int fsize(const char *filename) {
 	struct stat st;
@@ -29,10 +31,15 @@ int fsize(const char *filename) {
 	return -1;
 }
 
+double sec_usec(int a, int b) {
+	int decimals = log10(b) + 1;
+	return a + b*pow(10.0, -decimals);
+}
+
 int main(int argc, char * argv[]) {
 
 
-	char timeStamp[20];
+	char timeStamp[90];
 	time_t ltime;
 	struct tm *Tm;
 	struct timeval tv;
@@ -48,7 +55,7 @@ int main(int argc, char * argv[]) {
 	DIR *d;
 	struct dirent *de;
 	struct stat dirbuf;
-	int exists;
+	int exists, bytes_read, bytes_written, bytes;
 	int total_size;
 	char path[256], perms[MAX_LINE];
 
@@ -156,7 +163,90 @@ int main(int argc, char * argv[]) {
 			}
 			//UPLD
 			else if(strcmp(buf, "UPLD\n") == 0) {
-				// upload
+				bzero((char *)& buf, sizeof(buf));
+				// receive length of filename
+				if((len = recv(new_s, buf, sizeof(buf), 0)) == -1) {
+					perror("filename length recv error");
+				}
+				short fn_len = (short) atoi(buf);
+				printf("fn_len: %d\n", fn_len);
+				bzero((char *)& buf, sizeof(buf));
+
+				// receive filename
+				if((len = recv(new_s, buf, fn_len, 0)) == -1) {
+					perror("filename recv error");
+				}
+				char filename[MAX_LINE];
+				strcpy(filename, buf);
+				printf("filename: %s\n", filename);
+				bzero((char *)& buf, sizeof(buf));
+
+				// send ack to client
+				strcpy(buf, "Server received filename and its length\n");
+				if(send(new_s, buf, strlen(buf)+1, 0) == -1) {
+					perror("server couldn't send ack");
+					exit(1);
+				}
+
+				// recv filesize
+				int32_t fsize;
+				char *sizedata = (char *)&fsize;
+				if(recv(new_s, sizedata, sizeof(sizedata), 0) == -1) {
+					perror("server file size recv error");
+				}
+				printf("initial size: %d\n", fsize);
+
+				/* get start timestamp */
+				ltime=time(NULL);
+				Tm=localtime(&ltime);
+				gettimeofday(&tv, NULL);
+				double starttime = sec_usec(Tm->tm_sec, tv.tv_usec);
+
+				// recv and save file
+				//filename[strlen(filename)-1]='\0';
+				fd = open(filename, O_CREAT|O_RDWR, S_IRUSR|S_IWUSR);
+				bytes_written=0;
+				bytes=0;
+				bytes_read=0;
+				while(1) {
+					bzero((char *)&buf, sizeof(buf));
+					printf("%d = %d ?\n", bytes_written, ntohl(fsize));
+					if(bytes_written == ntohl(fsize))
+						break;
+					bytes_read = read(new_s, buf, sizeof(buf));
+					if(bytes_read < 0) {
+						perror("read bytes error");
+						exit(1);
+					}
+
+					void *p = buf;
+					while(bytes_read > 0) {
+						bytes = write(fd, p, bytes_read);
+						if(bytes<=0) {
+							perror("write bytes error");
+							exit(1);
+						}
+						bytes_read -= bytes;
+						p += bytes;
+						bytes_written += bytes;
+					}
+				}
+				printf("broke while loop\n");
+
+				/*create end time stamp*/
+				ltime=time(NULL);
+				Tm=localtime(&ltime);
+				printf("%d:%d:%d\n", Tm->tm_hour, Tm->tm_min, Tm->tm_sec);
+				gettimeofday(&tv, NULL);
+				double endtime = sec_usec(Tm->tm_sec, tv.tv_usec);
+				sprintf(timeStamp, "%d bytes transferred in %d seconds: %d Megabytes/sec", bytes_written, endtime-starttime, bytes_written/1000000/(endtime-starttime));
+				printf("timestamp: %s\n", timeStamp);
+
+				// send timestamp
+				if(send(new_s, timeStamp, strlen(timeStamp)+1, 0) == -1) {
+					perror("timestamp send error");
+					exit(1);
+				}
 			}
 
 			//DELF
@@ -458,13 +548,6 @@ int main(int argc, char * argv[]) {
 			else {
 				printf("%s: invalid command\n", buf);
 			}
-
-			/*create time stamp*/
-			//ltime=time(NULL);
-			//Tm=localtime(&ltime);
-			//printf("%d:%d:%d\n", Tm->tm_hour, Tm->tm_min, Tm->tm_sec);
-			//gettimeofday(&tv, NULL);
-			//sprintf(timeStamp, "%d:%d:%d.%d", Tm->tm_hour, Tm->tm_min, Tm->tm_sec, tv.tv_usec);
 			bzero((char*)&buf,sizeof(buf));
 			}
 		
