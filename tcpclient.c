@@ -14,12 +14,14 @@
 #include <fcntl.h>
 #define MAX_LINE 4096
 
-char *trim(char *s) {
-	//int i = strlen(s);
-	//if((i>0) && (s[i]=='\n'))
-	//	s[i]=='\0';
-	//return s;
-	return strtok(s, "\n");
+int fsize(const char *);
+
+int fsize(const char *filename) {
+	struct stat st;
+
+	if(stat(filename, &st) == 0)
+		return st.st_size;
+	return -1;
 }
 
 int main(int argc, char * argv[]) {
@@ -309,6 +311,59 @@ int main(int argc, char * argv[]) {
 		if(send(s, buf, len, 0) == -1) {
 			perror("client send error!\n");
 			exit(1);
+		}
+
+		//UPLD
+		if(!strncmp(buf, "UPLD", 4)) {
+			char fn[MAX_LINE];
+			char fn_len[MAX_LINE];
+			char ack[100];
+			char timestamp[90];
+			printf("Filename length: ");
+			fgets(fn_len, sizeof(fn_len), stdin);
+			printf("Filename: ");
+			fgets(fn, sizeof(fn), stdin);
+
+			/* Send length of filename */
+			if(send(s, fn_len, strlen(fn_len)+1, 0) == -1) {
+				perror("client filename length send error!\n");
+				exit(1);
+			}
+			/* Send filename */
+			if(send(s, fn, strlen(fn)+1, 0) == -1) {
+				perror("client filename send error!\n");
+				exit(1);
+			}
+
+			// recv ready ack from server
+			if(recv(s, ack, sizeof(ack), 0) == -1) {
+				perror("failed to receive ack");
+			}
+			printf("%s\n", ack);
+
+			// send filesize
+			if(!access(fn, F_OK)) {
+				int filesize = fsize(fn);
+				if(filesize>-1) {
+					printf("filesize: %d\n", filesize);
+					int32_t conv = htonl(filesize);
+					char *err = (char*)&conv;
+					if(send(s, err, sizeof(err), 0) == -1) {
+						perror("file size send failure");
+					}
+				}
+			}
+			else {
+				printf("file does not exist\n");
+				continue;
+			}
+
+			// recv timestamp
+			if(recv(s, timestamp, sizeof(timestamp), 0) == -1) {
+				perror("failed to receive timestamp");
+				exit(1);
+			}
+			printf("%s\n", timestamp);
 		}
 
 		//DWLD
