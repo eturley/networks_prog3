@@ -342,6 +342,7 @@ int main(int argc, char * argv[]) {
 			printf("%s\n", ack);
 
 			// send filesize
+			fn[strlen(fn)-1]='\0'; // get rid of trailing newline for filename
 			if(!access(fn, F_OK)) {
 				int filesize = fsize(fn);
 				if(filesize>-1) {
